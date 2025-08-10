@@ -1,0 +1,14 @@
+{
+  "name": "xiv-locker",
+  "version": "1.0.0",
+  "main": "index.js",
+  "repository": "https://github.com/imballinst/xiv-locker",
+  "author": "Try Ajitiono <ballinst@gmail.com>",
+  "license": "MIT",
+  "scripts": {
+    "dev": "serve ."
+  },
+  "devDependencies": {
+    "serve": "14.2.4"
+  }
+}
