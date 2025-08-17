@@ -1,14 +1,16 @@
 {
-  "name": "xiv-locker",
-  "version": "1.0.0",
-  "main": "index.js",
-  "repository": "https://github.com/imballinst/xiv-locker",
-  "author": "Try Ajitiono <ballinst@gmail.com>",
-  "license": "MIT",
+  "name": "vite-project",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
   "scripts": {
-    "dev": "serve ."
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
   },
   "devDependencies": {
-    "serve": "14.2.4"
-  }
+    "typescript": "5.8.3",
+    "vite": "7.1.2"
+  },
+  "packageManager": "yarn@1.22.19+sha1.4ba7fc5c6e704fce2066ecbfb0b0d8976fe62447"
 }

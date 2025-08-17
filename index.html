@@ -1,182 +1,39 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <title>Movable Shape Cropper</title>
+    <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Vite + TS</title>
+
     <style>
+      html,
+      body {
+        margin: 0;
+        max-width: 100vw;
+      }
+
       canvas {
         border: 1px solid black;
-        margin: 10px;
         background: transparent;
       }
     </style>
   </head>
   <body>
-    <h1>Movable Shape Cropper (Square & Circle)</h1>
+    <main>
+      <!-- Main canvas -->
+      <canvas id="mainCanvas" width="200" height="200"></canvas>
 
-    <input
-      type="file"
-      id="fileInput"
-      accept="image/png,image/jpeg"
-    /><br /><br />
+      <input
+        type="file"
+        id="fileInput"
+        accept="image/png,image/jpeg,image/webp"
+      /><br /><br />
 
-    <!-- Main canvas -->
-    <canvas id="mainCanvas" width="500" height="400"></canvas>
+      <!-- Cropped shape canvas -->
+      <canvas id="cropCanvas" width="200" height="200"></canvas>
+    </main>
 
-    <!-- Cropped shape canvas -->
-    <canvas id="cropCanvas" width="200" height="200"></canvas>
-
-    <script>
-      const fileInput = document.getElementById("fileInput");
-      const mainCanvas = document.getElementById("mainCanvas");
-      const mainCtx = mainCanvas.getContext("2d");
-      const cropCanvas = document.getElementById("cropCanvas");
-      const cropCtx = cropCanvas.getContext("2d");
-
-      let img = null;
-      let draggingShape = null;
-      let offsetX = 0;
-      let offsetY = 0;
-
-      const shapes = [
-        { type: "rect", x: 50, y: 50, width: 120, height: 90 },
-        { type: "circle", x: 280, y: 160, radius: 60 },
-      ];
-
-      function drawMainCanvas() {
-        if (!img) return;
-        mainCtx.clearRect(0, 0, mainCanvas.width, mainCanvas.height);
-        mainCtx.drawImage(img, 0, 0, mainCanvas.width, mainCanvas.height);
-
-        // Draw shapes
-        mainCtx.strokeStyle = "red";
-        mainCtx.lineWidth = 2;
-        shapes.forEach((shape) => {
-          mainCtx.beginPath();
-          if (shape.type === "rect") {
-            mainCtx.rect(shape.x, shape.y, shape.width, shape.height);
-          } else {
-            mainCtx.arc(shape.x, shape.y, shape.radius, 0, Math.PI * 2);
-          }
-          mainCtx.stroke();
-        });
-      }
-
-      function drawCropCanvas(shape) {
-        cropCtx.clearRect(0, 0, cropCanvas.width, cropCanvas.height);
-
-        if (shape.type === "rect") {
-          cropCanvas.width = shape.width;
-          cropCanvas.height = shape.height;
-
-          cropCtx.beginPath();
-          cropCtx.rect(0, 0, shape.width, shape.height);
-          cropCtx.clip();
-
-          cropCtx.drawImage(
-            mainCanvas,
-            shape.x,
-            shape.y,
-            shape.width,
-            shape.height,
-            0,
-            0,
-            shape.width,
-            shape.height
-          );
-        } else if (shape.type === "circle") {
-          const size = shape.radius * 2;
-          cropCanvas.width = size;
-          cropCanvas.height = size;
-
-          cropCtx.beginPath();
-          cropCtx.arc(shape.radius, shape.radius, shape.radius, 0, Math.PI * 2);
-          cropCtx.clip();
-
-          cropCtx.drawImage(
-            mainCanvas,
-            shape.x - shape.radius,
-            shape.y - shape.radius,
-            size,
-            size,
-            0,
-            0,
-            size,
-            size
-          );
-        }
-      }
-
-      // Upload image
-      fileInput.addEventListener("change", (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          img = new Image();
-          img.onload = () => {
-            mainCanvas.width = img.width;
-            mainCanvas.height = img.height;
-            drawMainCanvas();
-          };
-          img.src = event.target.result;
-        };
-        reader.readAsDataURL(file);
-      });
-
-      // Mouse events for dragging
-      mainCanvas.addEventListener("mousedown", (e) => {
-        if (!img) return;
-
-        const rect = mainCanvas.getBoundingClientRect();
-        const mouseX = e.clientX - rect.left;
-        const mouseY = e.clientY - rect.top;
-
-        for (let shape of shapes) {
-          mainCtx.beginPath();
-          if (shape.type === "rect") {
-            mainCtx.rect(shape.x, shape.y, shape.width, shape.height);
-          } else {
-            mainCtx.arc(shape.x, shape.y, shape.radius, 0, Math.PI * 2);
-          }
-
-          if (mainCtx.isPointInPath(mouseX, mouseY)) {
-            draggingShape = shape;
-            offsetX = mouseX - shape.x;
-            offsetY = mouseY - shape.y;
-            drawCropCanvas(shape);
-            break;
-          }
-        }
-      });
-
-      mainCanvas.addEventListener("mousemove", (e) => {
-        if (draggingShape) {
-          const rect = mainCanvas.getBoundingClientRect();
-          const mouseX = e.clientX - rect.left;
-          const mouseY = e.clientY - rect.top;
-
-          if (draggingShape.type === "rect") {
-            draggingShape.x = mouseX - offsetX;
-            draggingShape.y = mouseY - offsetY;
-          } else {
-            draggingShape.x = mouseX - offsetX;
-            draggingShape.y = mouseY - offsetY;
-          }
-
-          drawMainCanvas();
-          drawCropCanvas(draggingShape);
-        }
-      });
-
-      mainCanvas.addEventListener("mouseup", () => {
-        draggingShape = null;
-      });
-
-      mainCanvas.addEventListener("mouseleave", () => {
-        draggingShape = null;
-      });
-    </script>
+    <script type="module" src="/src/main.ts"></script>
   </body>
 </html>
