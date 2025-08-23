@@ -1,27 +1,33 @@
 import { findClickedShape, type Shape } from "./utils/points";
 
-// https://stackoverflow.com/a/5932203
-function relMouseCoords(event) {
+declare global {
+  interface HTMLCanvasElement {
+    relMouseCoords(event: MouseEvent): { x: number; y: number };
+  }
+}
+HTMLCanvasElement.prototype.relMouseCoords = function (event) {
+  // https://stackoverflow.com/a/5932203
   var totalOffsetX = 0;
   var totalOffsetY = 0;
   var canvasX = 0;
   var canvasY = 0;
-  var currentElement = this;
+  var currentElement: HTMLElement = this;
 
   do {
     totalOffsetX += currentElement.offsetLeft - currentElement.scrollLeft;
     totalOffsetY += currentElement.offsetTop - currentElement.scrollTop;
-  } while ((currentElement = currentElement.offsetParent));
+  } while ((currentElement = currentElement.offsetParent as HTMLElement));
 
   canvasX = event.pageX - totalOffsetX;
   canvasY = event.pageY - totalOffsetY;
 
   return { x: canvasX, y: canvasY };
-}
-HTMLCanvasElement.prototype.relMouseCoords = relMouseCoords;
+};
 
 //
 const mainCanvas = document.getElementById("mainCanvas") as HTMLCanvasElement;
+const cropCanvas = document.getElementById("cropCanvas") as HTMLCanvasElement;
+let currentlySelectedShapeIndex: number | undefined = undefined;
 
 async function init() {
   const res = await fetch("./locker.webp");
@@ -33,7 +39,7 @@ async function init() {
       // 1080x562
       mainCanvas.width = img.width;
       mainCanvas.height = img.height;
-      initCanvasImage(mainCanvas, img);
+      initMainCanvas(mainCanvas, img);
     };
     img.src = event.target!.result as string;
   };
@@ -112,29 +118,21 @@ const mainShapes: Shape[] = [
   },
 ];
 
-function initCanvasImage(canvas: HTMLCanvasElement, img: HTMLImageElement) {
-  if (!img) return;
-
-  const ctx = canvas.getContext("2d")!;
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+function initMainCanvas(canvas: HTMLCanvasElement, img: HTMLImageElement) {
+  initCanvasImage(canvas, img);
 
   for (const shape of mainShapes) {
     drawShapeInCanvas(canvas, shape);
   }
 }
 
-function initCropCanvas(ctx: CanvasRenderingContext2D) {
-  // Draw shapes
-  // shapes.forEach((shape) => {
-  //   ctx.beginPath();
-  //   if (shape.type === "rect") {
-  //     ctx.rect(shape.x, shape.y, shape.width, shape.height);
-  //   } else {
-  //     ctx.arc(shape.x, shape.y, shape.radius, 0, Math.PI * 2);
-  //   }
-  //   ctx.stroke();
-  // });
+function initCanvasImage(canvas: HTMLCanvasElement, img: HTMLImageElement) {
+  const ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  if (!img) return;
+
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 }
 
 function drawShapeInCanvas(canvas: HTMLCanvasElement, shape: Shape) {
@@ -159,81 +157,43 @@ function drawShapeInCanvas(canvas: HTMLCanvasElement, shape: Shape) {
 
 // Upload image
 //
-// const fileInput = document.getElementById("fileInput");
-//
-// fileInput.addEventListener("change", (e) => {
-//   const file = e.target.files[0];
-//   if (!file) return;
+const fileInput = document.getElementById("fileInput") as HTMLInputElement;
+const images: HTMLImageElement[] = [];
 
-//   const reader = new FileReader();
-//   reader.onload = (event) => {
-//     img = new Image();
-//     img.onload = () => {
-//       mainCanvas.width = img.width;
-//       mainCanvas.height = img.height;
-//       drawCropCanvas();
-//     };
-//     img.src = event.target.result;
-//   };
-//   reader.readAsDataURL(file);
-// });
+fileInput.addEventListener("change", (e) => {
+  const file = (e.target as HTMLInputElement).files![0];
+  console.info(currentlySelectedShapeIndex, file);
+  if (!file || currentlySelectedShapeIndex === undefined) return;
 
-// // Mouse events for dragging
-// mainCanvas.addEventListener("mousedown", (e) => {
-//   if (!img) return;
+  const reader = new FileReader();
+  reader.onload = (event) => {
+    const img = new Image();
+    img.onload = () => {
+      cropCanvas.width = img.width;
+      cropCanvas.height = img.height;
+    };
+    img.src = event.target!.result as string;
 
-//   const rect = mainCanvas.getBoundingClientRect();
-//   const mouseX = e.clientX - rect.left;
-//   const mouseY = e.clientY - rect.top;
-//   const mainCtx = mainCanvas.getContext("2d");
-
-//   for (let shape of shapes) {
-//     mainCtx.beginPath();
-//     if (shape.type === "rect") {
-//       mainCtx.rect(shape.x, shape.y, shape.width, shape.height);
-//     } else {
-//       mainCtx.arc(shape.x, shape.y, shape.radius, 0, Math.PI * 2);
-//     }
-
-//     if (mainCtx.isPointInPath(mouseX, mouseY)) {
-//       draggingShape = shape;
-//       offsetX = mouseX - shape.x;
-//       offsetY = mouseY - shape.y;
-//       drawCropCanvas(shape);
-//       break;
-//     }
-//   }
-// });
-mainCanvas.addEventListener("mousedown", (e) => {
-  // Magic number 3 just because of browsers not sure why
-  const matchingShape = findClickedShape(mainShapes, e.clientX, e.clientY - 3);
-  console.info(matchingShape);
-  console.info("---");
+    images[currentlySelectedShapeIndex!] = img;
+  };
+  reader.readAsDataURL(file);
 });
 
-// mainCanvas.addEventListener("mousemove", (e) => {
-//   if (draggingShape) {
-//     const rect = mainCanvas.getBoundingClientRect();
-//     const mouseX = e.clientX - rect.left;
-//     const mouseY = e.clientY - rect.top;
+mainCanvas.addEventListener("mousedown", (e) => {
+  // Magic number 3 just because of browsers not sure why
+  const effectiveX = e.clientX + window.scrollX;
+  const effectiveY = e.clientY + window.scrollY - 3;
 
-//     if (draggingShape.type === "rect") {
-//       draggingShape.x = mouseX - offsetX;
-//       draggingShape.y = mouseY - offsetY;
-//     } else {
-//       draggingShape.x = mouseX - offsetX;
-//       draggingShape.y = mouseY - offsetY;
-//     }
+  const matchingShape = findClickedShape(mainShapes, effectiveX, effectiveY);
+  currentlySelectedShapeIndex = matchingShape;
+  console.info(
+    currentlySelectedShapeIndex,
+    e.clientX,
+    e.clientY,
+    window.scrollX,
+    window.scrollY,
+    images[currentlySelectedShapeIndex!]
+  );
 
-//     drawCropCanvas();
-//     drawCropCanvas(draggingShape);
-//   }
-// });
-
-// mainCanvas.addEventListener("mouseup", () => {
-//   draggingShape = null;
-// });
-
-// mainCanvas.addEventListener("mouseleave", () => {
-//   draggingShape = null;
-// });
+  initCanvasImage(cropCanvas, images[currentlySelectedShapeIndex!]);
+});
