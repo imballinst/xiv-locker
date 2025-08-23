@@ -1,3 +1,26 @@
+import { findClickedShape, type Shape } from "./utils/points";
+
+// https://stackoverflow.com/a/5932203
+function relMouseCoords(event) {
+  var totalOffsetX = 0;
+  var totalOffsetY = 0;
+  var canvasX = 0;
+  var canvasY = 0;
+  var currentElement = this;
+
+  do {
+    totalOffsetX += currentElement.offsetLeft - currentElement.scrollLeft;
+    totalOffsetY += currentElement.offsetTop - currentElement.scrollTop;
+  } while ((currentElement = currentElement.offsetParent));
+
+  canvasX = event.pageX - totalOffsetX;
+  canvasY = event.pageY - totalOffsetY;
+
+  return { x: canvasX, y: canvasY };
+}
+HTMLCanvasElement.prototype.relMouseCoords = relMouseCoords;
+
+//
 const mainCanvas = document.getElementById("mainCanvas") as HTMLCanvasElement;
 
 async function init() {
@@ -18,11 +41,6 @@ async function init() {
 }
 
 init();
-
-type Shape =
-  | { type: "rect"; x: number; y: number; width: number; height: number }
-  | { type: "circle"; x: number; y: number; radius: number }
-  | { type: "points"; points: Array<{ x: number; y: number }> };
 
 const mainShapes: Shape[] = [
   {
@@ -62,6 +80,36 @@ const mainShapes: Shape[] = [
       { x: 552, y: 283 },
     ],
   },
+  {
+    type: "points",
+    points: [
+      { x: 428, y: 175 },
+      { x: 522, y: 170 },
+      { x: 524, y: 288 },
+      { x: 452, y: 296 },
+      { x: 440, y: 288 },
+      { x: 434, y: 287 },
+    ],
+  },
+  {
+    type: "points",
+    points: [
+      { x: 463, y: 306 },
+      { x: 518, y: 298 },
+      { x: 519, y: 376 },
+      { x: 484, y: 382 },
+      { x: 482, y: 323 },
+    ],
+  },
+  {
+    type: "points",
+    points: [
+      { x: 738, y: 182 },
+      { x: 911, y: 202 },
+      { x: 871, y: 512 },
+      { x: 723, y: 423 },
+    ],
+  },
 ];
 
 function initCanvasImage(canvas: HTMLCanvasElement, img: HTMLImageElement) {
@@ -95,54 +143,18 @@ function drawShapeInCanvas(canvas: HTMLCanvasElement, shape: Shape) {
   ctx.strokeStyle = "red";
   ctx.lineWidth = 2;
 
-  if (shape.type === "rect") {
-    ctx.beginPath();
-    ctx.rect(0, 0, shape.width, shape.height);
-    ctx.clip();
+  ctx.beginPath();
 
-    ctx.drawImage(
-      mainCanvas,
-      shape.x,
-      shape.y,
-      shape.width,
-      shape.height,
-      0,
-      0,
-      shape.width,
-      shape.height
-    );
-  } else if (shape.type === "circle") {
-    const size = shape.radius * 2;
+  for (let i = 0; i < shape.points.length; i++) {
+    const point = shape.points[i];
+    let nextPoint = shape.points[i + 1];
+    if (!nextPoint) nextPoint = shape.points[0];
 
-    ctx.beginPath();
-    ctx.arc(shape.radius, shape.radius, shape.radius, 0, Math.PI * 2);
-    ctx.clip();
-
-    ctx.drawImage(
-      mainCanvas,
-      shape.x - shape.radius,
-      shape.y - shape.radius,
-      size,
-      size,
-      0,
-      0,
-      size,
-      size
-    );
-  } else {
-    ctx.beginPath();
-
-    for (let i = 0; i < shape.points.length; i++) {
-      const point = shape.points[i];
-      let nextPoint = shape.points[i + 1];
-      if (!nextPoint) nextPoint = shape.points[0];
-
-      ctx.moveTo(point.x, point.y);
-      ctx.lineTo(nextPoint.x, nextPoint.y);
-    }
-
-    ctx.stroke();
+    ctx.moveTo(point.x, point.y);
+    ctx.lineTo(nextPoint.x, nextPoint.y);
   }
+
+  ctx.stroke();
 }
 
 // Upload image
@@ -193,7 +205,10 @@ function drawShapeInCanvas(canvas: HTMLCanvasElement, shape: Shape) {
 //   }
 // });
 mainCanvas.addEventListener("mousedown", (e) => {
-  console.info(e.clientX, e.clientY);
+  // Magic number 3 just because of browsers not sure why
+  const matchingShape = findClickedShape(mainShapes, e.clientX, e.clientY - 3);
+  console.info(matchingShape);
+  console.info("---");
 });
 
 // mainCanvas.addEventListener("mousemove", (e) => {
